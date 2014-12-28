@@ -214,7 +214,7 @@ int create_item_layers(int y, Layer* parent, AgendaItem* item, caltime_t relativ
 		//Create text layer
 		char* text = 0;
 		if (row_text != 0)
-			text = strcat("  ", row_text); //set the reference to the text saved in the event struct
+			text = row_text; //set the reference to the text saved in the event struct
 		item_texts[num_layers] = 0; //no reference in item_texts for this layer (as the text should not be freed when tidying up UI, only by the database)
 
 		TextLayer *layer = text_layer_create(GRect(0,y,text_layer_width,line_height*line_height_factor));

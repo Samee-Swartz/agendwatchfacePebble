@@ -33,6 +33,6 @@
     "versionCode": 10,
     "versionLabel": "2.13",
     "watchapp": {
-        "watchface": true
+        "watchface": false
     }
 }

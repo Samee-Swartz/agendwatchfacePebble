@@ -122,34 +122,34 @@ void set_refresh_at_if_decrease(caltime_t t) { //convenience function
 
 //Create a string from time that can be shown to the user according to settings. relative_to contains the date that the user expects to see (to determine whether to display time or day). If relative_time is true, then the function may print remaining minutes to relative_to.
 void time_to_showstring(char* buffer, size_t buffersize, caltime_t time, caltime_t relative_to, bool relative_time, bool hour_12, bool append_am_pm, bool prepend_dash) {
-	if (prepend_dash) {
-		buffer[0] = '-';
-		buffersize--;
-		buffer++; //advance pointer by the byte we just added
-	}
+	// if (prepend_dash) {
+	// 	buffer[0] = '-';
+	// 	buffersize--;
+	// 	buffer++; //advance pointer by the byte we just added
+	// }
 
 	//Catch times that are not on relative_to (and not on the day after, but early in the night), show their date instead
 	if (relative_time && time>=relative_to && time-relative_to <= 60) { //show relative time ("in 5 minutes"). Condition implies that they're on the same day
-		if (prepend_dash)
+		// if (prepend_dash)
 			snprintf(buffer, buffersize, "%dmin  ", (int) (time-relative_to));
-		else
-			snprintf(buffer, buffersize, "%dmin", (int) (time-relative_to));
+		// else
+		// 	snprintf(buffer, buffersize, "%dmin", (int) (time-relative_to));
 		refresh_at = 1; //force refresh next minute tick
 	}
 	else { //Show "regular" time
 		if (hour_12) {
 			int hour = (int) caltime_get_hour(time);
-			if (prepend_dash)
+			// if (prepend_dash)
 				snprintf(buffer, buffersize, append_am_pm ? (hour < 12 ? "%d:%02dam  " : "%d:%02dpm  ") : "%d:%02d  ", hour % 12 == 0 ? 12 : hour % 12, (int) caltime_get_minute(time));
-			else
-				snprintf(buffer, buffersize, append_am_pm ? (hour < 12 ? "%d:%02dam" : "%d:%02dpm") : "%d:%02d", hour % 12 == 0 ? 12 : hour % 12, (int) caltime_get_minute(time));
+			// else
+			// 	snprintf(buffer, buffersize, append_am_pm ? (hour < 12 ? "%d:%02dam" : "%d:%02dpm") : "%d:%02d", hour % 12 == 0 ? 12 : hour % 12, (int) caltime_get_minute(time));
 
 		}
 		else
-			if (prepend_dash)
+			// if (prepend_dash)
 				snprintf(buffer, buffersize, append_am_pm ? (caltime_get_hour(time) <= 12 ? "%02ld:%02ldam" : "%02ld:%02ldpm") : "%02ld:%02ld", caltime_get_hour(time), caltime_get_minute(time));
-			else
-				snprintf(buffer, buffersize, append_am_pm ? (caltime_get_hour(time) <= 12 ? "%02ld:%02ldam  " : "%02ld:%02ldpm  ") : "%02ld:%02ld  ", caltime_get_hour(time), caltime_get_minute(time));
+			// else
+			// 	snprintf(buffer, buffersize, append_am_pm ? (caltime_get_hour(time) <= 12 ? "%02ld:%02ldam  " : "%02ld:%02ldpm  ") : "%02ld:%02ld  ", caltime_get_hour(time), caltime_get_minute(time));
 		set_refresh_at_if_decrease(time+(relative_time && time%(24*60*60) >= 60 ? -60 : 0)); //refresh at "time" (if countdown active, refresh already 60 minutes before that)
 	}
 }
@@ -447,11 +447,11 @@ void set_time_font_from_settings() {
 		time_font_id = time_font_id_new;
 		switch (time_font_id) {
 			case 1: //big time
-				time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ROBOTO_CONDENSED_BOLD_40));
+				time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DROID_SERIF_BOLD_37));
 				break;
 			case 0:
 			default:
-				time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ROBOTO_CONDENSED_30));
+				time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DROID_SERIF_27));
 				break;
 		}
 	}
@@ -497,6 +497,7 @@ void create_header(Layer *window_layer) {
 		text_layer_set_background_color(text_layer_time, GColorBlack);
 		text_layer_set_text_color(text_layer_time, GColorWhite);
 		text_layer_set_font(text_layer_time, time_font);
+		text_layer_set_text_alignment(text_layer_time, GTextAlignmentCenter);
 		text_layer_set_overflow_mode(text_layer_time, GTextOverflowModeWordWrap);
 		layer_add_child(window_layer, text_layer_get_layer(text_layer_time));
 

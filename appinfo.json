@@ -16,14 +16,14 @@
             },
             {
                 "characterRegex": "[0-9: ]",
-                "file": "fonts/DroidSerif.ttf",
-                "name": "FONT_DROID_SERIF_27",
+                "file": "fonts/Roboto-Condensed-webfont.ttf",
+                "name": "FONT_ROBOTO_CONDENSED_30",
                 "type": "font"
             },
             {
                 "characterRegex": "[0-9 :]",
-                "file": "fonts/DroidSerif-Bold.ttf",
-                "name": "FONT_DROID_SERIF_BOLD_37",
+                "file": "fonts/Roboto-BoldCondensed-webfont.ttf",
+                "name": "FONT_ROBOTO_CONDENSED_BOLD_40",
                 "type": "font"
             }
         ]

@@ -31,7 +31,8 @@ InverterLayer *inverter_layer = 0; //the inverter layer or 0 if not applicable
 TextLayer *text_layer_time = 0; //layer for the current time (if header enabled in settings)
 TextLayer *text_layer_date = 0; //layer for current date (if header enabled)
 TextLayer *text_layer_battery = 0; //layer for current weekday (if header enabled)
-TextLayer *text_layer_bluetooth = 0; //layer for bluetooth connectivity
+TextLayer *text_layer_bluetooth = 0; //layer for bluetooth connectivityTextLayer *sync_indicator_layer = 0; //sync indicator
+
 TextLayer *sync_indicator_layer = 0; //sync indicator
 
 PropertyAnimation *scroll_animation = 0; //current scrolling animation or 0
@@ -98,22 +99,22 @@ void set_font_from_settings() {
 	}
 }
 
-// //Calculate from settings how much horizontal space the time layer should take. I know I could let Pebble measure the text width, but I want this offset to be constant for a consistent look
-// int get_time_size(uint8_t row_design, uint8_t number_of_times, bool append_am_pm) { //wants the row design
-// 	if ((row_design/ROW_DESIGN_TIME_TYPE_OFFSET)%0x8 == 0) //no time displayed
-// 		return 0;
+//Calculate from settings how much horizontal space the time layer should take. I know I could let Pebble measure the text width, but I want this offset to be constant for a consistent look
+int get_item_text_offset(uint8_t row_design, uint8_t number_of_times, bool append_am_pm) { //wants the row design
+	if ((row_design/ROW_DESIGN_TIME_TYPE_OFFSET)%0x8 == 0) //no time displayed
+		return 0;
 
-// 	int result = font_index == 2 ? 45 : font_index == 1 ? 35 : 28; //start with basic width
-// 	if (append_am_pm) //add some if am/pm is displayed
-// 		result+= font_index == 2 ? 20 : font_index == 1 ? 17 : 15;
-// 	if (number_of_times > 1) { //twice that if actually two times are displayed (like "19:00-20:00")
-// 		result*=2;
-// 	}
+	int result = font_index == 2 ? 45 : font_index == 1 ? 35 : 28; //start with basic width
+	if (append_am_pm) //add some if am/pm is displayed
+		result+= font_index == 2 ? 20 : font_index == 1 ? 17 : 15;
+	if (number_of_times > 1) { //twice that if actually two times are displayed (like "19:00-20:00")
+		result*=2;
+	}
 
-// 	result += font_index == 2 ? 13 : font_index == 1 ? 11 : 9; //add some more
+	result += font_index == 2 ? 13 : font_index == 1 ? 11 : 9; //add some more
 
-// 	return result;
-// }
+	return result;
+}
 
 void set_refresh_at_if_decrease(caltime_t t) { //convenience function
 	if (refresh_at == 0 || t < refresh_at)
@@ -122,38 +123,33 @@ void set_refresh_at_if_decrease(caltime_t t) { //convenience function
 
 //Create a string from time that can be shown to the user according to settings. relative_to contains the date that the user expects to see (to determine whether to display time or day). If relative_time is true, then the function may print remaining minutes to relative_to.
 void time_to_showstring(char* buffer, size_t buffersize, caltime_t time, caltime_t relative_to, bool relative_time, bool hour_12, bool append_am_pm, bool prepend_dash) {
-	// if (prepend_dash) {
-	// 	buffer[0] = '-';
-	// 	buffersize--;
-	// 	buffer++; //advance pointer by the byte we just added
-	// }
+	if (prepend_dash) {
+		buffer[0] = '-';
+		buffersize--;
+		buffer++; //advance pointer by the byte we just added
+	}
 
 	//Catch times that are not on relative_to (and not on the day after, but early in the night), show their date instead
-	if (relative_time && time>=relative_to && time-relative_to <= 60) { //show relative time ("in 5 minutes"). Condition implies that they're on the same day
-		// if (prepend_dash)
-			snprintf(buffer, buffersize, "%dmin  ", (int) (time-relative_to));
-		// else
-		// 	snprintf(buffer, buffersize, "%dmin", (int) (time-relative_to));
+	if (caltime_to_date_only(relative_to) != caltime_to_date_only(time) && !(caltime_get_tomorrow(relative_to) == caltime_to_date_only(time) && caltime_get_hour(time) < 3)) { //show weekday instead of time
+		static char *daystrings[7] = {"Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"};
+		snprintf(buffer, buffersize, "%s", daystrings[caltime_get_weekday(time)]);
+	}
+	else if (relative_time && time>=relative_to && time-relative_to <= 60) { //show relative time ("in 5 minutes"). Condition implies that they're on the same day
+		snprintf(buffer, buffersize, "%dmin", (int) (time-relative_to));
 		refresh_at = 1; //force refresh next minute tick
 	}
 	else { //Show "regular" time
 		if (hour_12) {
 			int hour = (int) caltime_get_hour(time);
-			// if (prepend_dash)
-				snprintf(buffer, buffersize, append_am_pm ? (hour < 12 ? "%d:%02dam  " : "%d:%02dpm  ") : "%d:%02d  ", hour % 12 == 0 ? 12 : hour % 12, (int) caltime_get_minute(time));
-			// else
-			// 	snprintf(buffer, buffersize, append_am_pm ? (hour < 12 ? "%d:%02dam" : "%d:%02dpm") : "%d:%02d", hour % 12 == 0 ? 12 : hour % 12, (int) caltime_get_minute(time));
-
+			snprintf(buffer, buffersize, append_am_pm ? (hour < 12 ? "%d:%02dam" : "%d:%02dpm") : "%d:%02d", hour % 12 == 0 ? 12 : hour % 12, (int) caltime_get_minute(time));
 		}
 		else
-			// if (prepend_dash)
-				snprintf(buffer, buffersize, append_am_pm ? (caltime_get_hour(time) <= 12 ? "%02ld:%02ldam" : "%02ld:%02ldpm") : "%02ld:%02ld", caltime_get_hour(time), caltime_get_minute(time));
-			// else
-			// 	snprintf(buffer, buffersize, append_am_pm ? (caltime_get_hour(time) <= 12 ? "%02ld:%02ldam  " : "%02ld:%02ldpm  ") : "%02ld:%02ld  ", caltime_get_hour(time), caltime_get_minute(time));
+			snprintf(buffer, buffersize, append_am_pm ? (caltime_get_hour(time) <= 12 ? "%02ld:%02ldam" : "%02ld:%02ldpm") : "%02ld:%02ld", caltime_get_hour(time), caltime_get_minute(time));
 		set_refresh_at_if_decrease(time+(relative_time && time%(24*60*60) >= 60 ? -60 : 0)); //refresh at "time" (if countdown active, refresh already 60 minutes before that)
 	}
 }
 
+//Creates the necessary layers for an item. Returns y+[height that the new layers take]. Every item has up to two rows, both consisting of a time and a text portion (either may be empty)
 //Creates the necessary layers for an item. Returns y+[height that the new layers take]. Every item has up to two rows, both consisting of a time and a text portion (either may be empty)
 int create_item_layers(int y, Layer* parent, AgendaItem* item, caltime_t relative_to, bool relative_time) { //relative_to and relative_time as used in time_to_showstring(...)
 	//Get settings
@@ -169,15 +165,19 @@ int create_item_layers(int y, Layer* parent, AgendaItem* item, caltime_t relativ
 		uint8_t design_time = (row_design/ROW_DESIGN_TIME_TYPE_OFFSET)%0x8;
 		uint8_t row_overflow = (row_design/ROW_DESIGN_TEXT_OVERFLOW_OFFSET)%0x4;
 		char* row_text = row == 0 ? item->row1text : item->row2text;
-		int time_layer_width = 0;
-		int text_layer_width = 0;
+
+		//Figure out height of this line and the width of the time
+		int time_layer_width = get_item_text_offset(row_design, design_time==3 ? 2 : 1, (settings & SETTINGS_BOOL_12H) && (settings & SETTINGS_BOOL_AMPM) ? 1 : 0); //desired width of time layer
+		int line_height_factor = row_overflow == 2 ? 2 : 1;
+		if (row_overflow == 1 && graphics_text_layout_get_content_size(row_text, row_design & ROW_DESIGN_TEXT_BOLD ? font_bold : font, GRect(time_layer_width,y,144-time_layer_width,line_height*2), GTextOverflowModeFill, GTextAlignmentLeft).h > line_height)  //row_overflow == 1: overflow if necessary
+			line_height_factor = 2;
 
 		//Create time text and layer
 		if (design_time != 0) { //should we show any time at all?
 			item_texts[num_layers] = malloc(20*sizeof(char));
 			//figure out whether to display start or end time
 			caltime_t time_to_show = design_time == 2 ? item->end_time : item->start_time;
-			if (design_time == 4) { //Settings say we should show end_time rather than start time if item has started
+			if (design_time == 4) { //Settings say we should show end_time rather than start time iff item has started
 				if (get_current_time() >= item->start_time)
 					time_to_show = item->end_time;
 			}
@@ -186,30 +186,15 @@ int create_item_layers(int y, Layer* parent, AgendaItem* item, caltime_t relativ
 			if (design_time == 3) //we should show start and end time. So we append the end time
 				time_to_showstring(item_texts[num_layers]+strlen(item_texts[num_layers]), 10, item->end_time, relative_to, relative_time && get_current_time() >= item->start_time, settings & SETTINGS_BOOL_12H ? 1 : 0, (settings & SETTINGS_BOOL_12H) && (settings & SETTINGS_BOOL_AMPM) ? 1 : 0, true);
 
-
-			TextLayer *size_layer = text_layer_create(GRect(0,y,144,line_height*1));
-			text_layer_set_text(size_layer, item_texts[num_layers]);
-			time_layer_width = text_layer_get_content_size(size_layer).w;
-			text_layer_width = 144-time_layer_width;
-
 			//Create time layer
-			TextLayer *layer = text_layer_create(GRect(text_layer_width,y,time_layer_width,line_height*1));
+			TextLayer *layer = text_layer_create(GRect(0,y,time_layer_width,line_height*line_height_factor));
 			text_layer_set_background_color(layer, GColorWhite);
 			text_layer_set_text_color(layer, GColorBlack);
 			text_layer_set_font(layer, font);
-			text_layer_set_text_alignment(layer, GTextAlignmentRight);
 			text_layer_set_text(layer, item_texts[num_layers]);
 			layer_add_child(parent, text_layer_get_layer(layer));
 			item_layers[num_layers++] = layer;
-		} else {
-			text_layer_width = 144;
 		}
-
-		//Figure out height of this line and the width of the time
-		// int time_layer_width = get_time_size(row_design, design_time==3 ? 2 : 1, (settings & SETTINGS_BOOL_12H) && (settings & SETTINGS_BOOL_AMPM) ? 1 : 0); //desired width of time layer
-		int line_height_factor = row_overflow == 2 ? 2 : 1;
-		if (row_overflow == 1 && graphics_text_layout_get_content_size(row_text, row_design & ROW_DESIGN_TEXT_BOLD ? font_bold : font, GRect(time_layer_width,y,144-time_layer_width,line_height*2), GTextOverflowModeFill, GTextAlignmentLeft).h > line_height)  //row_overflow == 1: overflow if necessary
-			line_height_factor = 1;
 
 		//Create text layer
 		char* text = 0;
@@ -217,7 +202,7 @@ int create_item_layers(int y, Layer* parent, AgendaItem* item, caltime_t relativ
 			text = row_text; //set the reference to the text saved in the event struct
 		item_texts[num_layers] = 0; //no reference in item_texts for this layer (as the text should not be freed when tidying up UI, only by the database)
 
-		TextLayer *layer = text_layer_create(GRect(0,y,text_layer_width,line_height*line_height_factor));
+		TextLayer *layer = text_layer_create(GRect(time_layer_width,y,144-time_layer_width,line_height*line_height_factor));
 		text_layer_set_background_color(layer, GColorWhite);
 		text_layer_set_text_color(layer, GColorBlack);
 		text_layer_set_font(layer, row_design & ROW_DESIGN_TEXT_BOLD ? font_bold : font);
@@ -374,7 +359,6 @@ void update_date(struct tm *time) { //updates the layer for the current date (if
 		static char date_text[] = "Wednesday, 00/00/00 ";
 
 		strftime(date_text, sizeof(date_text), "%A, %D", time);
-
 		date_text[sizeof(date_text)-1] = 0;
 		text_layer_set_text(text_layer_date, date_text);
 	}
@@ -385,14 +369,13 @@ void update_battery(BatteryChargeState charge_state) {
 		static char battery_text[] = "xxxxxxx";
 		if (charge_state.is_plugged) {
 			if (charge_state.charge_percent == 100) {
-		      snprintf(battery_text, sizeof(battery_text), "Done ");
-		    } else {
-		      snprintf(battery_text, sizeof(battery_text), ". . .   ");
-		    }
+				snprintf(battery_text, sizeof(battery_text), "Done ");
+			} else {
+				snprintf(battery_text, sizeof(battery_text), ". . .   ");
+			}
 		} else {
 			snprintf(battery_text, sizeof(battery_text), "%d%% ", charge_state.charge_percent);
 		}
-
 		text_layer_set_text(text_layer_battery, battery_text);
 	}
 }
@@ -447,11 +430,11 @@ void set_time_font_from_settings() {
 		time_font_id = time_font_id_new;
 		switch (time_font_id) {
 			case 1: //big time
-				time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DROID_SERIF_BOLD_37));
+				time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ROBOTO_CONDENSED_BOLD_40));
 				break;
 			case 0:
 			default:
-				time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_DROID_SERIF_27));
+				time_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_ROBOTO_CONDENSED_30));
 				break;
 		}
 	}
@@ -463,10 +446,10 @@ void set_time_font_from_settings() {
 			header_b_height = 18;
 			header_date_height = 22;
 			header_time_height = 44;
+			header_height = header_time_height + header_date_height;
 			header_time_width = 98;
 			header_time_y_offset = -6;
 			header_b_y_offset = -2;
-			header_height = header_time_height + header_date_height;
 		break;
 
 		case 0: //small time/header
@@ -475,10 +458,10 @@ void set_time_font_from_settings() {
 			header_b_height = 15;
 			header_date_height = 19;
 			header_time_height = 33;
+			header_height = header_time_height + header_date_height;
 			header_time_width = 74;
 			header_time_y_offset = -3;
 			header_b_y_offset = -2;
-			header_height = header_time_height + header_date_height;
 		break;
 	}
 }
@@ -497,7 +480,6 @@ void create_header(Layer *window_layer) {
 		text_layer_set_background_color(text_layer_time, GColorBlack);
 		text_layer_set_text_color(text_layer_time, GColorWhite);
 		text_layer_set_font(text_layer_time, time_font);
-		text_layer_set_text_alignment(text_layer_time, GTextAlignmentCenter);
 		text_layer_set_overflow_mode(text_layer_time, GTextOverflowModeWordWrap);
 		layer_add_child(window_layer, text_layer_get_layer(text_layer_time));
 
